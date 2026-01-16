@@ -8,14 +8,17 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var appState = AppState()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if appState.currentUser == nil {
+                OnboardingView()
+            } else {
+                FeedView()
+            }
         }
-        .padding()
+        .environment(appState)
     }
 }
 
