@@ -20,17 +20,19 @@ struct OnboardingView: View {
         VStack(spacing: 30) {
             Spacer()
             
-            // App branding
-            Image(systemName: "photo.stack.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.green.gradient)
-            
-            Text("Welcome to Grassy")
-                .font(.largeTitle.bold())
-            
-            Text(isSignUp ? "Share your moments with the world" : "Welcome back!")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            // App branding with logo
+            VStack(spacing: 20) {
+                // Logo placeholder - Add turf-index-logo.png to Assets
+                Image("turf-index-logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+                    .padding(.bottom, 10)
+                
+                Text(isSignUp ? "Join the community" : "Welcome back!")
+                    .font(.title2)
+                    .foregroundStyle(TurfTheme.forestGreen)
+            }
             
             Spacer()
             
@@ -80,18 +82,14 @@ struct OnboardingView: View {
             Button(action: handleAuth) {
                 if appState.isLoading {
                     ProgressView()
+                        .tint(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
                 } else {
                     Text(isSignUp ? "Sign Up" : "Sign In")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
                 }
             }
-            .background(.green.gradient)
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .buttonStyle(.turfPrimary)
             .padding(.horizontal, 40)
             .disabled(isFormInvalid || appState.isLoading)
             
@@ -102,18 +100,13 @@ struct OnboardingView: View {
             } label: {
                 Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
                     .font(.subheadline)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(TurfTheme.primary)
             }
             
             Spacer()
         }
         .padding()
-        .onChange(of: appState.error) { oldValue, newValue in
-            if let error = newValue {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-        }
+        
     }
     
     private var isFormInvalid: Bool {

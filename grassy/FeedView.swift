@@ -22,21 +22,30 @@ struct FeedView: View {
                     postsList
                 }
             }
-            .navigationTitle("Grassy")
+            .navigationTitle("Turf Index")
             .toolbar {
+                // Optional: Use logo in navigation bar instead of text
+                // Uncomment below and remove .navigationTitle() to use logo
+                /*
+                ToolbarItem(placement: .principal) {
+                    NavigationLogoTitle()
+                }
+                */
+                
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showingCreatePost = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .foregroundStyle(TurfTheme.primary)
                     }
                 }
                 
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         if let user = appState.currentUser {
-                            Text("@\(user.username)")
+                            Label("@\(user.username)", systemImage: "person.circle")
                             Divider()
                         }
                         
@@ -48,7 +57,8 @@ struct FeedView: View {
                             Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
                         }
                     } label: {
-                        Image(systemName: "person.crop.circle")
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(TurfTheme.greenGradient)
                     }
                 }
             }
@@ -65,14 +75,15 @@ struct FeedView: View {
         ContentUnavailableView {
             Label("No Posts Yet", systemImage: "photo.on.rectangle.angled")
         } description: {
-            Text("Be the first to share something!")
+            Text("Be the first to share your turf!")
         } actions: {
             Button {
                 showingCreatePost = true
             } label: {
                 Text("Create Post")
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.turfPrimary)
+            .padding(.horizontal, 40)
         }
     }
     
@@ -100,11 +111,13 @@ struct PostCard: View {
             HStack {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.green)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(TurfTheme.greenGradient)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("@\(post.username)")
                         .font(.headline)
+                        .foregroundStyle(TurfTheme.forestGreen)
                     
                     Text(post.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
@@ -169,12 +182,7 @@ struct PostCard: View {
                 FlowLayout(spacing: 6) {
                     ForEach(post.tags, id: \.self) { tag in
                         Text("#\(tag)")
-                            .font(.subheadline)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(.green.opacity(0.1))
-                            .foregroundStyle(.green)
-                            .clipShape(Capsule())
+                            .turfTagStyle()
                     }
                 }
             }

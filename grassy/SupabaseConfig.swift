@@ -1,42 +1,56 @@
 //
-//  SupabaseConfig.swift
+//  SupabaseConfig-Template.swift
 //  grassy
 //
-//  Created by jason on 1/14/26.
+//  INSTRUCTIONS:
+//  1. Rename this file to "SupabaseConfig.swift"
+//  2. Fill in your actual credentials below
+//  3. Never commit SupabaseConfig.swift to git
 //
 
 import Foundation
 import Supabase
 
-/// Supabase configuration and client setup
-class SupabaseConfig {
-    static let shared = SupabaseConfig()
+/// Configuration for Supabase client
+enum SupabaseConfig {
+    // Get these from your Supabase project settings
+    // URL format: https://your-project-ref.supabase.co
+    static let url = URL(string: "https://your-project.supabase.co")!
     
-    let client: SupabaseClient
+    // This is your public anon key (safe to use in client apps)
+    static let anonKey = "your-anon-key-here"
     
-    private init() {
-        // TODO: Replace with your actual Supabase credentials
-        let supabaseURL = URL(string: "https://YOUR_PROJECT_ID.supabase.co")!
-        let supabaseKey = "YOUR_SUPABASE_ANON_KEY"
-        
-        self.client = SupabaseClient(
-            supabaseURL: supabaseURL,
-            supabaseKey: supabaseKey
-        )
-    }
+    static let client = SupabaseClient(
+        supabaseURL: url,
+        supabaseKey: anonKey
+    )
 }
 
-/// Extension for easy access to Supabase client
-extension SupabaseConfig {
-    var auth: AuthClient {
-        client.auth
-    }
+/// Configuration for Digital Ocean Spaces (S3-compatible)
+enum SpacesConfig {
+    // Digital Ocean Spaces endpoint
+    // Format: https://{region}.digitaloceanspaces.com
+    // Regions: nyc3, sfo3, ams3, sgp1, fra1, etc.
+    static let endpoint = "https://nyc3.digitaloceanspaces.com"
+    static let region = "nyc3"
     
-    var database: DatabaseClient {
-        client.database
-    }
+    // TODO: Change this to the real CDN endpoint.
+    static let cdnEndpoint = "https://nyc3.digitaloceanspaces.com"
     
-    var storage: StorageClient {
-        client.storage
+    // Your Space name
+    static let bucket = "grassy-photos"
+    
+    // Digital Ocean Spaces API credentials
+    // Generate at: https://cloud.digitalocean.com/account/api/tokens
+    static let accessKey = "your-access-key"
+    static let secretKey = "your-secret-key"
+    
+    // Public URL for uploaded photos
+    static func photoURL(for key: String) -> URL? {
+        // For public Spaces, use the CDN endpoint
+        URL(string: "\(endpoint)/\(bucket)/\(key)")
+        
+        // Alternative: Use custom domain if configured
+        // URL(string: "https://cdn.yourdomain.com/\(key)")
     }
 }

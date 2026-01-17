@@ -91,25 +91,28 @@ actor PostService {
         return posts
     }
     
+    
+    
     // MARK: - Update Post
     
     /// Updates a post's caption, location, or tags
+    struct PostUpdate: Encodable {
+        var caption: String?
+        var location: String?
+        var tags: [String]?
+    }
+
     func updatePost(
         id: String,
         caption: String? = nil,
         location: String? = nil,
         tags: [String]? = nil
     ) async throws {
-        var updates: [String: Any] = [:]
-        if let caption = caption {
-            updates["caption"] = caption
-        }
-        if let location = location {
-            updates["location"] = location
-        }
-        if let tags = tags {
-            updates["tags"] = tags
-        }
+        let updates = PostUpdate(
+            caption: caption,
+            location: location,
+            tags: tags
+        )
         
         try await client
             .from(Tables.posts)
@@ -139,19 +142,28 @@ actor PostService {
     func subscribeToNewPosts() -> AsyncStream<Post> {
         AsyncStream { continuation in
             Task {
-                let channel = await client.channel("posts")
+                let channel = client.channel("posts")
                 
-                await channel
-                    .on("postgres_changes", filter: ChannelFilter(
-                        event: "INSERT",
-                        schema: "public",
-                        table: Tables.posts
-                    )) { payload in
-                        if let post = try? payload.decodeRecord(as: Post.self) {
-                            continuation.yield(post)
-                        }
+                let _ = channel.onPostgresChange(
+                    InsertAction.self,
+                    schema: "public",
+                    table: Tables.posts
+                ) { (payload: InsertAction) in
+                    do {
+                        let jsonData = try JSONSerialization.data(withJSONObject: payload.record)
+                        let post = try JSONDecoder().decode(Post.self, from: jsonData)
+                        continuation.yield(post)
+                    } catch {
+                        print("Failed to decode post: \(error)")
                     }
-                    .subscribe()
+                }
+                
+                // Subscribe is called on the channel, after setting up listeners
+                await channel.subscribe()
+                
+                continuation.onTermination = { _ in
+                    Task { await channel.unsubscribe() }
+                }
             }
         }
     }

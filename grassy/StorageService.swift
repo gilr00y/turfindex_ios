@@ -8,42 +8,23 @@
 import Foundation
 import UIKit
 
-/// Service for uploading photos to Digital Ocean Spaces (S3-compatible)
+/// Service for uploading photos to Digital Ocean Spaces using presigned URLs
 actor StorageService {
     static let shared = StorageService()
     
     private init() {}
     
-    /// Uploads a photo to Digital Ocean Spaces and returns the URL
+    /// Uploads a photo using a presigned URL from the backend
     func uploadPhoto(_ imageData: Data, userId: String) async throws -> String {
-        // Generate unique filename
-        let timestamp = Date().timeIntervalSince1970
-        let filename = "\(userId)/\(UUID().uuidString)_\(Int(timestamp)).jpg"
+        // Step 1: Request presigned URL from your backend
+        let presignedData = try await requestPresignedURL(userId: userId)
         
-        // Create S3 upload request
-        let url = URL(string: "\(SpacesConfig.endpoint)/\(SpacesConfig.bucket)/\(filename)")!
-        var request = URLRequest(url: url)
+        // Step 2: Upload directly to Digital Ocean Spaces
+        var request = URLRequest(url: presignedData.uploadURL)
         request.httpMethod = "PUT"
-        request.setValue("public-read", forHTTPHeaderField: "x-amz-acl")
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        
-        // Sign the request with AWS Signature V4
-        let signature = try await signRequest(
-            method: "PUT",
-            path: "/\(SpacesConfig.bucket)/\(filename)",
-            headers: [
-                "x-amz-acl": "public-read",
-                "Content-Type": "image/jpeg"
-            ],
-            body: imageData
-        )
-        
-        // Add authorization header
-        request.setValue(signature.authorization, forHTTPHeaderField: "Authorization")
-        request.setValue(signature.date, forHTTPHeaderField: "x-amz-date")
         request.httpBody = imageData
         
-        // Upload
         let (_, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
@@ -51,25 +32,28 @@ actor StorageService {
             throw StorageError.uploadFailed
         }
         
-        return filename
+        // Return the key (filename) for storing in your database
+        return presignedData.key
     }
     
-    /// Deletes a photo from Digital Ocean Spaces
+    /// Deletes a photo by notifying the backend
     func deletePhoto(key: String) async throws {
-        let url = URL(string: "\(SpacesConfig.endpoint)/\(SpacesConfig.bucket)/\(key)")!
+        // Call your backend to delete the photo
+        guard let url = URL(string: "\(BackendConfig.baseURL)/api/photos/delete") else {
+            throw StorageError.invalidRequest
+        }
+        
         var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Sign the request
-        let signature = try await signRequest(
-            method: "DELETE",
-            path: "/\(SpacesConfig.bucket)/\(key)",
-            headers: [:],
-            body: nil
-        )
+        // Include authentication token if needed
+        let authToken = AuthService.shared.currentToken
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         
-        request.setValue(signature.authorization, forHTTPHeaderField: "Authorization")
-        request.setValue(signature.date, forHTTPHeaderField: "x-amz-date")
+        
+        let payload = ["key": key]
+        request.httpBody = try JSONEncoder().encode(payload)
         
         let (_, response) = try await URLSession.shared.data(for: request)
         
@@ -79,92 +63,67 @@ actor StorageService {
         }
     }
     
-    // MARK: - AWS Signature V4
-    
-    private func signRequest(
-        method: String,
-        path: String,
-        headers: [String: String],
-        body: Data?
-    ) async throws -> (authorization: String, date: String) {
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime]
-        let now = Date()
-        let amzDate = dateFormatter.string(from: now).replacingOccurrences(of: "-", with: "").replacingOccurrences(of: ":", with: "").components(separatedBy: ".")[0] + "Z"
-        let dateStamp = String(amzDate.prefix(8))
-        
-        // Create canonical request
-        let payloadHash = (body ?? Data()).sha256Hash
-        var canonicalHeaders = headers
-        canonicalHeaders["host"] = URL(string: SpacesConfig.endpoint)!.host!
-        canonicalHeaders["x-amz-date"] = amzDate
-        
-        let sortedHeaders = canonicalHeaders.sorted { $0.key < $1.key }
-        let canonicalHeadersString = sortedHeaders.map { "\($0.key.lowercased()):\($0.value)" }.joined(separator: "\n")
-        let signedHeaders = sortedHeaders.map { $0.key.lowercased() }.joined(separator: ";")
-        
-        let canonicalRequest = """
-        \(method)
-        \(path)
-        
-        \(canonicalHeadersString)
-        
-        \(signedHeaders)
-        \(payloadHash)
-        """
-        
-        // Create string to sign
-        let algorithm = "AWS4-HMAC-SHA256"
-        let credentialScope = "\(dateStamp)/\(SpacesConfig.region)/s3/aws4_request"
-        let stringToSign = """
-        \(algorithm)
-        \(amzDate)
-        \(credentialScope)
-        \(canonicalRequest.sha256Hash)
-        """
-        
-        // Calculate signature
-        let kDate = hmacSHA256(key: "AWS4\(SpacesConfig.secretKey)".data(using: .utf8)!, data: dateStamp.data(using: .utf8)!)
-        let kRegion = hmacSHA256(key: kDate, data: SpacesConfig.region.data(using: .utf8)!)
-        let kService = hmacSHA256(key: kRegion, data: "s3".data(using: .utf8)!)
-        let kSigning = hmacSHA256(key: kService, data: "aws4_request".data(using: .utf8)!)
-        let signature = hmacSHA256(key: kSigning, data: stringToSign.data(using: .utf8)!).hexString
-        
-        // Create authorization header
-        let authorization = "\(algorithm) Credential=\(SpacesConfig.accessKey)/\(credentialScope), SignedHeaders=\(signedHeaders), Signature=\(signature)"
-        
-        return (authorization, amzDate)
+    /// Gets the public URL for a photo (no signing needed since photos are public-read)
+    func getPhotoURL(key: String) -> URL {
+        // Construct the public URL directly
+        URL(string: "\(SpacesConfig.cdnEndpoint)/\(key)")!
     }
     
-    private func hmacSHA256(key: Data, data: Data) -> Data {
-        var hmac = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        key.withUnsafeBytes { keyBytes in
-            data.withUnsafeBytes { dataBytes in
-                CCHmac(CCHmacAlgorithm(kCCHmacAlgSHA256), keyBytes.baseAddress, key.count, dataBytes.baseAddress, data.count, &hmac)
-            }
+    // MARK: - Private Methods
+    
+    private func requestPresignedURL(userId: String) async throws -> PresignedURLResponse {
+        guard let url = URL(string: "\(BackendConfig.baseURL)/api/photos/presigned-upload") else {
+            throw StorageError.invalidRequest
         }
-        return Data(hmac)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Include authentication token
+        let authToken = AuthService.shared.currentToken
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        
+        
+        let payload = ["userId": userId]
+        request.httpBody = try JSONEncoder().encode(payload)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw StorageError.presignedURLFailed
+        }
+        
+        return try JSONDecoder().decode(PresignedURLResponse.self, from: data)
     }
 }
 
-extension Data {
-    var sha256Hash: String {
-        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        self.withUnsafeBytes { buffer in
-            _ = CC_SHA256(buffer.baseAddress, CC_LONG(self.count), &hash)
-        }
-        return hash.map { String(format: "%02x", $0) }.joined()
-    }
+// MARK: - Models
+
+struct PresignedURLResponse: Codable {
+    let uploadURL: URL
+    let key: String
     
-    var hexString: String {
-        map { String(format: "%02x", $0) }.joined()
+    enum CodingKeys: String, CodingKey {
+        case uploadURL = "upload_url"
+        case key
     }
 }
+
+// MARK: - Configuration
+
+struct BackendConfig {
+    static let baseURL = "https://your-backend.com" // Replace with your actual backend URL
+}
+
+// MARK: - Errors
 
 enum StorageError: LocalizedError {
     case uploadFailed
     case deleteFailed
-    case invalidImage
+    case invalidRequest
+    case presignedURLFailed
     
     var errorDescription: String? {
         switch self {
@@ -172,10 +131,11 @@ enum StorageError: LocalizedError {
             return "Failed to upload photo"
         case .deleteFailed:
             return "Failed to delete photo"
-        case .invalidImage:
-            return "Invalid image data"
+        case .invalidRequest:
+            return "Invalid request"
+        case .presignedURLFailed:
+            return "Failed to get upload URL"
         }
     }
 }
 
-import CommonCrypto

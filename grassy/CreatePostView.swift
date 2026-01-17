@@ -67,6 +67,7 @@ struct CreatePostView: View {
                         
                         Button(action: addTag) {
                             Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(TurfTheme.primary)
                         }
                         .disabled(tagInput.isEmpty)
                     }
@@ -161,8 +162,8 @@ struct TagView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(.green.opacity(0.1))
-        .foregroundStyle(.green)
+        .background(TurfTheme.limeGreen.opacity(0.15))
+        .foregroundStyle(TurfTheme.forestGreen)
         .clipShape(Capsule())
     }
 }

@@ -12,6 +12,7 @@ import Auth
 /// Service for handling authentication with Supabase
 actor AuthService {
     static let shared = AuthService()
+    let currentToken = String()
     
     private let client = SupabaseConfig.client
     
@@ -27,9 +28,7 @@ actor AuthService {
             password: password
         )
         
-        guard let user = authResponse.user else {
-            throw AuthError.signUpFailed
-        }
+        let user = authResponse.user
         
         // Create profile with username
         let profile = UserProfile(
@@ -81,9 +80,7 @@ actor AuthService {
     
     /// Get current user profile
     func getCurrentUserProfile() async throws -> UserProfile? {
-        guard let session = try await client.auth.session else {
-            return nil
-        }
+        let session = try await client.auth.session
         
         let userId = session.user.id.uuidString
         

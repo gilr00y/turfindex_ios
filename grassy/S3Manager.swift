@@ -8,44 +8,55 @@
 import Foundation
 import CryptoKit
 
-/// Manager for Digital Ocean Spaces (S3-compatible) storage
-class S3Manager {
+/// Manager for uploading photos to Digital Ocean Spaces (S3-compatible storage)
+actor S3Manager {
     static let shared = S3Manager()
     
-    // TODO: Replace with your Digital Ocean Spaces credentials
-    private let accessKey = "YOUR_DO_SPACES_ACCESS_KEY"
-    private let secretKey = "YOUR_DO_SPACES_SECRET_KEY"
-    private let endpoint = "https://YOUR_REGION.digitaloceanspaces.com"
-    private let bucketName = "grassy-photos"
-    private let region = "YOUR_REGION" // e.g., "nyc3", "sfo3"
+    private let endpoint: String
+    private let region: String
+    private let bucket: String
+    private let accessKey: String
+    private let secretKey: String
     
-    private init() {}
+    private init() {
+        self.endpoint = SpacesConfig.endpoint
+        self.region = SpacesConfig.region
+        self.bucket = SpacesConfig.bucket
+        self.accessKey = SpacesConfig.accessKey
+        self.secretKey = SpacesConfig.secretKey
+    }
     
-    /// Upload image data to Digital Ocean Spaces
-    func uploadImage(_ imageData: Data, userId: String) async throws -> String {
-        let fileName = "\(userId)/\(UUID().uuidString).jpg"
-        let url = "\(endpoint)/\(bucketName)/\(fileName)"
+    /// Upload an image to Digital Ocean Spaces
+    /// - Parameters:
+    ///   - imageData: The image data to upload
+    ///   - userId: The ID of the user uploading the image
+    /// - Returns: The public URL of the uploaded image
+    func uploadImage(_ imageData: Data, userId: UUID) async throws -> String {
+        let fileName = "\(userId.uuidString)/\(UUID().uuidString).jpg"
+        let urlString = "\(endpoint)/\(bucket)/\(fileName)"
         
-        guard let uploadURL = URL(string: url) else {
+        guard let url = URL(string: urlString) else {
             throw S3Error.invalidURL
         }
         
-        var request = URLRequest(url: uploadURL)
+        var request = URLRequest(url: url)
         request.httpMethod = "PUT"
+        request.httpBody = imageData
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        request.setValue("\(imageData.count)", forHTTPHeaderField: "Content-Length")
         request.setValue("public-read", forHTTPHeaderField: "x-amz-acl")
         
-        // Create AWS Signature Version 4
+        // Add AWS Signature Version 4 authentication
+        let date = Date()
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime]
-        let dateString = dateFormatter.string(from: Date())
-        request.setValue(dateString, forHTTPHeaderField: "x-amz-date")
+        let amzDate = dateFormatter.string(from: date).replacingOccurrences(of: "-", with: "").replacingOccurrences(of: ":", with: "").split(separator: ".").first! + "Z"
+        
+        request.setValue(String(amzDate), forHTTPHeaderField: "x-amz-date")
         
         // Sign the request
-        signRequest(&request, payload: imageData, date: Date())
+        signRequest(&request, date: date, fileName: fileName)
         
-        let (_, response) = try await URLSession.shared.upload(for: request, from: imageData)
+        let (_, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
@@ -53,24 +64,29 @@ class S3Manager {
         }
         
         // Return the public URL
-        return url
+        return urlString
     }
     
-    /// Delete image from Digital Ocean Spaces
-    func deleteImage(at url: String) async throws {
-        guard let deleteURL = URL(string: url) else {
+    /// Delete an image from Digital Ocean Spaces
+    /// - Parameter imageURL: The URL of the image to delete
+    func deleteImage(at imageURL: String) async throws {
+        guard let url = URL(string: imageURL) else {
             throw S3Error.invalidURL
         }
         
-        var request = URLRequest(url: deleteURL)
+        var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         
+        let date = Date()
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime]
-        let dateString = dateFormatter.string(from: Date())
-        request.setValue(dateString, forHTTPHeaderField: "x-amz-date")
+        let amzDate = dateFormatter.string(from: date).replacingOccurrences(of: "-", with: "").replacingOccurrences(of: ":", with: "").split(separator: ".").first! + "Z"
         
-        signRequest(&request, payload: Data(), date: Date())
+        request.setValue(String(amzDate), forHTTPHeaderField: "x-amz-date")
+        
+        // Extract filename from URL for signing
+        let fileName = url.path.replacingOccurrences(of: "/\(bucket)/", with: "")
+        signRequest(&request, date: date, fileName: fileName)
         
         let (_, response) = try await URLSession.shared.data(for: request)
         
@@ -80,76 +96,42 @@ class S3Manager {
         }
     }
     
-    // MARK: - AWS Signature V4
+    // MARK: - AWS Signature V4 Signing
     
-    private func signRequest(_ request: inout URLRequest, payload: Data, date: Date) {
+    private func signRequest(_ request: inout URLRequest, date: Date, fileName: String) {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         dateFormatter.timeZone = TimeZone(identifier: "UTC")
         let dateStamp = dateFormatter.string(from: date)
         
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-        let amzDate = isoFormatter.string(from: date)
+        let iso8601Formatter = ISO8601DateFormatter()
+        iso8601Formatter.formatOptions = [.withInternetDateTime]
+        let amzDate = iso8601Formatter.string(from: date).replacingOccurrences(of: "-", with: "").replacingOccurrences(of: ":", with: "").split(separator: ".").first! + "Z"
         
-        // Create canonical request
-        let payloadHash = sha256Hash(payload)
-        request.setValue(payloadHash, forHTTPHeaderField: "x-amz-content-sha256")
+        let method = request.httpMethod ?? "PUT"
+        let canonicalURI = "/\(bucket)/\(fileName)"
+        let canonicalQueryString = ""
+        let canonicalHeaders = "host:\(URL(string: endpoint)!.host!)\nx-amz-date:\(amzDate)\n"
+        let signedHeaders = "host;x-amz-date"
         
-        let canonicalRequest = createCanonicalRequest(request: request, payloadHash: payloadHash)
-        let canonicalRequestHash = sha256Hash(Data(canonicalRequest.utf8))
+        let payloadHash = SHA256.hash(data: request.httpBody ?? Data())
+        let payloadHashString = payloadHash.compactMap { String(format: "%02x", $0) }.joined()
         
-        // Create string to sign
+        let canonicalRequest = "\(method)\n\(canonicalURI)\n\(canonicalQueryString)\n\(canonicalHeaders)\n\(signedHeaders)\n\(payloadHashString)"
+        
+        let algorithm = "AWS4-HMAC-SHA256"
         let credentialScope = "\(dateStamp)/\(region)/s3/aws4_request"
-        let stringToSign = """
-        AWS4-HMAC-SHA256
-        \(amzDate)
-        \(credentialScope)
-        \(canonicalRequestHash)
-        """
         
-        // Calculate signature
+        let canonicalRequestHash = SHA256.hash(data: Data(canonicalRequest.utf8))
+        let canonicalRequestHashString = canonicalRequestHash.compactMap { String(format: "%02x", $0) }.joined()
+        
+        let stringToSign = "\(algorithm)\n\(amzDate)\n\(credentialScope)\n\(canonicalRequestHashString)"
+        
         let signature = calculateSignature(stringToSign: stringToSign, dateStamp: dateStamp)
         
-        // Create authorization header
-        let authorizationHeader = """
-        AWS4-HMAC-SHA256 Credential=\(accessKey)/\(credentialScope), \
-        SignedHeaders=content-type;host;x-amz-acl;x-amz-content-sha256;x-amz-date, \
-        Signature=\(signature)
-        """
+        let authorizationHeader = "\(algorithm) Credential=\(accessKey)/\(credentialScope), SignedHeaders=\(signedHeaders), Signature=\(signature)"
         
         request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")
-    }
-    
-    private func createCanonicalRequest(request: URLRequest, payloadHash: String) -> String {
-        let method = request.httpMethod ?? "GET"
-        let uri = request.url?.path ?? "/"
-        let query = request.url?.query ?? ""
-        
-        let host = request.url?.host ?? ""
-        let contentType = request.value(forHTTPHeaderField: "Content-Type") ?? ""
-        let amzAcl = request.value(forHTTPHeaderField: "x-amz-acl") ?? ""
-        let amzDate = request.value(forHTTPHeaderField: "x-amz-date") ?? ""
-        
-        let canonicalHeaders = """
-        content-type:\(contentType)
-        host:\(host)
-        x-amz-acl:\(amzAcl)
-        x-amz-content-sha256:\(payloadHash)
-        x-amz-date:\(amzDate)
-        
-        """
-        
-        let signedHeaders = "content-type;host;x-amz-acl;x-amz-content-sha256;x-amz-date"
-        
-        return """
-        \(method)
-        \(uri)
-        \(query)
-        \(canonicalHeaders)
-        \(signedHeaders)
-        \(payloadHash)
-        """
     }
     
     private func calculateSignature(stringToSign: String, dateStamp: String) -> String {
@@ -162,15 +144,10 @@ class S3Manager {
         return signature.map { String(format: "%02x", $0) }.joined()
     }
     
-    private func sha256Hash(_ data: Data) -> String {
-        let hash = SHA256.hash(data: data)
-        return hash.map { String(format: "%02x", $0) }.joined()
-    }
-    
     private func hmac(key: Data, data: Data) -> Data {
-        let symmetricKey = SymmetricKey(data: key)
-        let signature = HMAC<SHA256>.authenticationCode(for: data, using: symmetricKey)
-        return Data(signature)
+        var hmac = HMAC<SHA256>(key: SymmetricKey(data: key))
+        hmac.update(data: data)
+        return Data(hmac.finalize())
     }
 }
 
@@ -182,11 +159,11 @@ enum S3Error: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Invalid URL"
+            return "Invalid URL for image upload"
         case .uploadFailed:
-            return "Failed to upload image"
+            return "Failed to upload image to storage"
         case .deleteFailed:
-            return "Failed to delete image"
+            return "Failed to delete image from storage"
         }
     }
 }
