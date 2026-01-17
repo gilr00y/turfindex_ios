@@ -13,7 +13,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if appState.currentUser == nil {
-                OnboardingView()
+                LeaderboardView()
             } else {
                 FeedView()
             }

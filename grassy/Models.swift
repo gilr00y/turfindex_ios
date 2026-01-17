@@ -12,14 +12,38 @@ import SwiftUI
 struct UserProfile: Identifiable, Codable {
     let id: String // Supabase auth user ID
     var username: String
+    var bio: String?
+    var businessName: String?
+    var phone: String?
+    var email: String?
+    var website: String?
+    var socialLinks: [SocialLink]?
     var createdAt: Date
     var updatedAt: Date?
     
     enum CodingKeys: String, CodingKey {
         case id
         case username
+        case bio
+        case businessName = "business_name"
+        case phone
+        case email
+        case website
+        case socialLinks = "social_links"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+}
+
+/// Social media link for user profiles
+struct SocialLink: Codable, Identifiable {
+    let id = UUID()
+    let platform: String // e.g., "instagram", "facebook", "twitter"
+    let url: String
+    
+    enum CodingKeys: String, CodingKey {
+        case platform
+        case url
     }
 }
 
@@ -32,6 +56,7 @@ struct Post: Identifiable, Codable {
     var location: String
     var tags: [String]
     let photoUrl: String // URL to photo in Digital Ocean Spaces
+    var additionalPhotos: [String]? // Additional photo URLs
     let createdAt: Date
     let updatedAt: Date?
     
@@ -43,6 +68,7 @@ struct Post: Identifiable, Codable {
         case location
         case tags
         case photoUrl = "photo_url"
+        case additionalPhotos = "additional_photos"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
