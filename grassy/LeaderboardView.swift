@@ -22,8 +22,8 @@ struct LeaderboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Subtle background tint
-                TurfTheme.backgroundTint
+                // Dark navy background
+                TurfTheme.navyBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -65,6 +65,9 @@ struct LeaderboardView: View {
             }
             .navigationTitle("Weekly Top 100")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(TurfTheme.navyBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -88,7 +91,7 @@ struct LeaderboardView: View {
     private var headerSection: some View {
         VStack(spacing: 12) {
             // Logo
-            Image("turf-index-logo")
+            Image("turf-index-no-bg")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 80, height: 80)
@@ -97,11 +100,11 @@ struct LeaderboardView: View {
             VStack(spacing: 4) {
                 Text("This Week's Best Turf")
                     .font(.title2.bold())
-                    .foregroundStyle(TurfTheme.forestGreen)
+                    .foregroundStyle(.white)
                 
                 Text("January 11 - 17, 2026")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
             }
             
             // Stats row
@@ -113,7 +116,13 @@ struct LeaderboardView: View {
             .padding(.top, 8)
         }
         .padding(.vertical, 20)
-        .background(TurfTheme.cardBackground)
+        .background(TurfTheme.navyBackground.opacity(0.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(TurfTheme.limeGreen.opacity(0.2), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal)
     }
     
     private func loadMockData() {
@@ -151,17 +160,6 @@ struct LeaderboardCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Rank badge
-            ZStack {
-                Circle()
-                    .fill(rankColor.gradient)
-                    .frame(width: 50, height: 50)
-                
-                Text("#\(entry.rank)")
-                    .font(.headline.bold())
-                    .foregroundStyle(.white)
-            }
-            
             // Thumbnail
             AsyncImage(url: URL(string: entry.post.photoUrl)) { image in
                 image
@@ -172,6 +170,7 @@ struct LeaderboardCard: View {
                     .fill(TurfTheme.limeGreen.opacity(0.2))
                     .overlay {
                         ProgressView()
+                            .tint(TurfTheme.primary)
                     }
             }
             .frame(width: 80, height: 80)
@@ -181,11 +180,11 @@ struct LeaderboardCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("@\(entry.post.username)")
                     .font(.headline)
-                    .foregroundStyle(TurfTheme.forestGreen)
+                    .foregroundStyle(.white)
                 
                 Text(entry.post.location)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                 
                 // Tags
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -195,8 +194,8 @@ struct LeaderboardCard: View {
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(TurfTheme.limeGreen.opacity(0.15))
-                                .foregroundStyle(TurfTheme.forestGreen)
+                                .background(TurfTheme.limeGreen.opacity(0.2))
+                                .foregroundStyle(TurfTheme.limeGreen)
                                 .clipShape(Capsule())
                         }
                     }
@@ -213,13 +212,27 @@ struct LeaderboardCard: View {
                 
                 Text("\(entry.votes)")
                     .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.8))
             }
         }
         .padding()
-        .background(TurfTheme.cardBackground)
+        .background(TurfTheme.navyBackground.opacity(0.5))
+        .overlay(alignment: .topLeading) {
+            // Rank badge tucked in top-left corner
+            Text("#\(entry.rank)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(rankColor.gradient)
+                .clipShape(Capsule())
+                .padding(8)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(TurfTheme.limeGreen.opacity(0.2), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
     }
     
     private var rankColor: Color {
@@ -250,12 +263,12 @@ struct StatPill: View {
             
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.7))
         }
         .frame(minWidth: 70)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(TurfTheme.limeGreen.opacity(0.1))
+        .background(TurfTheme.limeGreen.opacity(0.15))
         .clipShape(Capsule())
     }
 }

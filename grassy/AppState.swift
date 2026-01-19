@@ -100,25 +100,37 @@ class AppState {
         error = nil
         
         do {
-            // 1. Upload photo to Digital Ocean Spaces
-            let photoKey = try await StorageService.shared.uploadPhoto(imageData, userId: user.id)
+            // Generate a unique filename
+            let filename = "\(UUID().uuidString).jpg"
             
-            // 2. Create post in Supabase
+            // 1. Upload photo using new API service (3-step process)
+            let recordId = try await ImageUploadService.shared.uploadImages(
+                userId: user.id,
+                images: [
+                    (key: "1", data: imageData, filename: filename)
+                ]
+            )
+            
+            // 2. Construct the photo URL from recordId and filename
+            // Format: user_id/record_id/filename
+            let photoUrl = "\(user.id)/\(recordId)/\(filename)"
+            
+            // 3. Create post in Supabase
             let post = try await PostService.shared.createPost(
                 userId: user.id,
                 username: user.username,
                 caption: caption,
                 location: location,
                 tags: tags,
-                photoUrl: photoKey
+                photoUrl: photoUrl
             )
             
-            // 3. Add to local posts array
+            // 4. Add to local posts array
             posts.insert(post, at: 0)
             
-            // 4. Cache the image
+            // 5. Cache the image
             if let image = UIImage(data: imageData) {
-                imageCache[photoKey] = image
+                imageCache[photoUrl] = image
             }
         } catch {
             self.error = error

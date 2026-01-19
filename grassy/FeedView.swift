@@ -13,16 +13,28 @@ struct FeedView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
-                if appState.isLoading && appState.posts.isEmpty {
-                    ProgressView("Loading posts...")
-                } else if appState.posts.isEmpty {
-                    emptyState
-                } else {
-                    postsList
+            ZStack {
+                // Dark navy background
+                TurfTheme.navyBackground
+                    .ignoresSafeArea()
+                
+                Group {
+                    if appState.isLoading && appState.posts.isEmpty {
+                        ProgressView("Loading posts...")
+                            .tint(TurfTheme.primary)
+                            .foregroundStyle(.white)
+                    } else if appState.posts.isEmpty {
+                        emptyState
+                    } else {
+                        postsList
+                    }
                 }
             }
             .navigationTitle("Turf Index")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(TurfTheme.navyBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 // Optional: Use logo in navigation bar instead of text
                 // Uncomment below and remove .navigationTitle() to use logo
@@ -74,8 +86,10 @@ struct FeedView: View {
     private var emptyState: some View {
         ContentUnavailableView {
             Label("No Posts Yet", systemImage: "photo.on.rectangle.angled")
+                .foregroundStyle(.white)
         } description: {
             Text("Be the first to share your turf!")
+                .foregroundStyle(.white.opacity(0.7))
         } actions: {
             Button {
                 showingCreatePost = true
@@ -112,16 +126,16 @@ struct PostCard: View {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.title2)
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(TurfTheme.greenGradient)
+                    .foregroundStyle(TurfTheme.primary, TurfTheme.limeGreen)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("@\(post.username)")
                         .font(.headline)
-                        .foregroundStyle(TurfTheme.forestGreen)
+                        .foregroundStyle(.white)
                     
                     Text(post.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.7))
                 }
                 
                 Spacer()
@@ -138,7 +152,7 @@ struct PostCard: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
             }
@@ -152,10 +166,11 @@ struct PostCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else if isLoadingImage {
                     Rectangle()
-                        .fill(.gray.opacity(0.2))
+                        .fill(TurfTheme.limeGreen.opacity(0.1))
                         .aspectRatio(1, contentMode: .fit)
                         .overlay {
                             ProgressView()
+                                .tint(TurfTheme.primary)
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
@@ -168,13 +183,14 @@ struct PostCard: View {
             if !post.caption.isEmpty {
                 Text(post.caption)
                     .font(.body)
+                    .foregroundStyle(.white)
             }
             
             // Location
             if !post.location.isEmpty {
                 Label(post.location, systemImage: "location.fill")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
             }
             
             // Tags
@@ -182,15 +198,23 @@ struct PostCard: View {
                 FlowLayout(spacing: 6) {
                     ForEach(post.tags, id: \.self) { tag in
                         Text("#\(tag)")
-                            .turfTagStyle()
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(TurfTheme.limeGreen.opacity(0.2))
+                            .foregroundStyle(TurfTheme.limeGreen)
+                            .clipShape(Capsule())
                     }
                 }
             }
         }
         .padding()
-        .background(.background)
+        .background(TurfTheme.navyBackground.opacity(0.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(TurfTheme.limeGreen.opacity(0.2), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
     
     private func loadImage() async {

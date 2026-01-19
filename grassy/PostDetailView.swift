@@ -20,45 +20,58 @@ struct PostDetailView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // Photo carousel
-                photoCarousel
-                
-                // Content sections
-                VStack(alignment: .leading, spacing: 24) {
-                    // Rank and votes section
-                    rankSection
+        ZStack {
+            // Dark navy background
+            TurfTheme.navyBackground
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Photo carousel
+                    photoCarousel
                     
-                    // Post details
-                    postDetailsSection
-                    
-                    Divider()
-                    
-                    // Business info
-                    businessInfoSection
-                    
-                    Divider()
-                    
-                    // Contact buttons
-                    contactButtonsSection
-                    
-                    Divider()
-                    
-                    // Social links
-                    if let socialLinks = userProfile.socialLinks, !socialLinks.isEmpty {
-                        socialLinksSection(links: socialLinks)
+                    // Content sections
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Rank and votes section
+                        rankSection
+                        
+                        // Post details
+                        postDetailsSection
                         
                         Divider()
+                            .background(.white.opacity(0.2))
+                        
+                        // Business info
+                        businessInfoSection
+                        
+                        Divider()
+                            .background(.white.opacity(0.2))
+                        
+                        // Contact buttons
+                        contactButtonsSection
+                        
+                        Divider()
+                            .background(.white.opacity(0.2))
+                        
+                        // Social links
+                        if let socialLinks = userProfile.socialLinks, !socialLinks.isEmpty {
+                            socialLinksSection(links: socialLinks)
+                            
+                            Divider()
+                                .background(.white.opacity(0.2))
+                        }
+                        
+                        // Location details
+                        locationSection
                     }
-                    
-                    // Location details
-                    locationSection
+                    .padding()
                 }
-                .padding()
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(TurfTheme.navyBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -140,11 +153,11 @@ struct PostDetailView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("This Week")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.7))
                     
                     Text(rankDescription)
                         .font(.headline)
-                        .foregroundStyle(TurfTheme.forestGreen)
+                        .foregroundStyle(.white)
                 }
             }
             
@@ -158,15 +171,19 @@ struct PostDetailView: View {
                 
                 Text("\(entry.votes)")
                     .font(.title3.bold())
-                    .foregroundStyle(TurfTheme.forestGreen)
+                    .foregroundStyle(.white)
                 
                 Text("votes")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
             }
         }
         .padding()
-        .background(TurfTheme.limeGreen.opacity(0.1))
+        .background(TurfTheme.navyBackground.opacity(0.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(TurfTheme.limeGreen.opacity(0.2), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
     
@@ -194,7 +211,7 @@ struct PostDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(entry.post.caption)
                 .font(.body)
-                .foregroundStyle(.primary)
+                .foregroundStyle(.white)
             
             // Tags
             FlowLayout(spacing: 8) {
@@ -204,7 +221,7 @@ struct PostDetailView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(TurfTheme.limeGreen.opacity(0.15))
-                        .foregroundStyle(TurfTheme.forestGreen)
+                        .foregroundStyle(TurfTheme.limeGreen)
                         .clipShape(Capsule())
                 }
             }
@@ -216,7 +233,7 @@ struct PostDetailView: View {
                 Text("Posted \(entry.post.createdAt.formatted(.relative(presentation: .named)))")
                     .font(.caption)
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.white.opacity(0.7))
         }
     }
     
@@ -232,7 +249,7 @@ struct PostDetailView: View {
                     
                     Text(businessName)
                         .font(.title3.bold())
-                        .foregroundStyle(TurfTheme.forestGreen)
+                        .foregroundStyle(.white)
                 }
             }
             
@@ -243,14 +260,14 @@ struct PostDetailView: View {
                 
                 Text("@\(userProfile.username)")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
             }
             
             // Bio
             if let bio = userProfile.bio {
                 Text(bio)
                     .font(.body)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.white)
                     .padding(.top, 4)
             }
         }
@@ -262,7 +279,7 @@ struct PostDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Contact")
                 .font(.headline)
-                .foregroundStyle(TurfTheme.forestGreen)
+                .foregroundStyle(.white)
             
             HStack(spacing: 12) {
                 // Call button
@@ -313,7 +330,7 @@ struct PostDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Follow Us")
                 .font(.headline)
-                .foregroundStyle(TurfTheme.forestGreen)
+                .foregroundStyle(.white)
             
             FlowLayout(spacing: 12) {
                 ForEach(links) { link in
@@ -328,8 +345,8 @@ struct PostDetailView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(TurfTheme.limeGreen.opacity(0.15))
-                            .foregroundStyle(TurfTheme.forestGreen)
+                            .background(TurfTheme.limeGreen.opacity(0.2))
+                            .foregroundStyle(TurfTheme.limeGreen)
                             .clipShape(Capsule())
                         }
                     }
@@ -355,7 +372,7 @@ struct PostDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Location")
                 .font(.headline)
-                .foregroundStyle(TurfTheme.forestGreen)
+                .foregroundStyle(.white)
             
             HStack(spacing: 8) {
                 Image(systemName: "mappin.circle.fill")
@@ -364,7 +381,7 @@ struct PostDetailView: View {
                 
                 Text(entry.post.location)
                     .font(.body)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.white)
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)

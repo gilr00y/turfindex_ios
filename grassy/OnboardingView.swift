@@ -17,96 +17,104 @@ struct OnboardingView: View {
     @State private var errorMessage = ""
     
     var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
+        ZStack {
+            // Dark navy background
+            TurfTheme.navyBackground
+                .ignoresSafeArea()
             
-            // App branding with logo
-            VStack(spacing: 20) {
-                // Logo placeholder - Add turf-index-logo.png to Assets
-                Image("turf-index-logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
-                    .padding(.bottom, 10)
+            VStack(spacing: 30) {
+                Spacer()
                 
-                Text(isSignUp ? "Join the community" : "Welcome back!")
-                    .font(.title2)
-                    .foregroundStyle(TurfTheme.forestGreen)
-            }
-            
-            Spacer()
-            
-            // Auth form
-            VStack(alignment: .leading, spacing: 16) {
-                if isSignUp {
+                // App branding with logo
+                VStack(spacing: 20) {
+                    // Logo - using no-bg version for navy background
+                    Image("turf-index-no-bg")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 200, height: 200)
+                        .padding(.bottom, 10)
+                    
+                    Text(isSignUp ? "Join the community" : "Welcome back!")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                }
+                
+                Spacer()
+                
+                // Auth form
+                VStack(alignment: .leading, spacing: 16) {
+                    if isSignUp {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Username")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            
+                            TextField("Choose a username", text: $username)
+                                .textFieldStyle(.roundedBorder)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+                    }
+                    
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Username")
+                        Text("Email")
                             .font(.headline)
+                            .foregroundStyle(.white)
                         
-                        TextField("Choose a username", text: $username)
+                        TextField("email@example.com", text: $email)
                             .textFieldStyle(.roundedBorder)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .keyboardType(.emailAddress)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Password")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        
+                        SecureField("Enter password", text: $password)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    
+                    if showError {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.top, 4)
                     }
                 }
+                .padding(.horizontal, 40)
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
-                        .font(.headline)
-                    
-                    TextField("email@example.com", text: $email)
-                        .textFieldStyle(.roundedBorder)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.emailAddress)
+                // Action button
+                Button(action: handleAuth) {
+                    if appState.isLoading {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else {
+                        Text(isSignUp ? "Sign Up" : "Sign In")
+                    }
+                }
+                .buttonStyle(.turfPrimary)
+                .padding(.horizontal, 40)
+                .disabled(isFormInvalid || appState.isLoading)
+                
+                // Toggle sign up/sign in
+                Button {
+                    isSignUp.toggle()
+                    showError = false
+                } label: {
+                    Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                        .font(.subheadline)
+                        .foregroundStyle(TurfTheme.primary)
                 }
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Password")
-                        .font(.headline)
-                    
-                    SecureField("Enter password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                }
-                
-                if showError {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.top, 4)
-                }
+                Spacer()
             }
-            .padding(.horizontal, 40)
-            
-            // Action button
-            Button(action: handleAuth) {
-                if appState.isLoading {
-                    ProgressView()
-                        .tint(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else {
-                    Text(isSignUp ? "Sign Up" : "Sign In")
-                }
-            }
-            .buttonStyle(.turfPrimary)
-            .padding(.horizontal, 40)
-            .disabled(isFormInvalid || appState.isLoading)
-            
-            // Toggle sign up/sign in
-            Button {
-                isSignUp.toggle()
-                showError = false
-            } label: {
-                Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                    .font(.subheadline)
-                    .foregroundStyle(TurfTheme.primary)
-            }
-            
-            Spacer()
+            .padding()
         }
-        .padding()
-        
     }
     
     private var isFormInvalid: Bool {

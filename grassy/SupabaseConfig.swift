@@ -15,10 +15,10 @@ import Supabase
 enum SupabaseConfig {
     // Get these from your Supabase project settings
     // URL format: https://your-project-ref.supabase.co
-    static let url = URL(string: "https://your-project.supabase.co")!
+    static let url = URL(string: "https://ynvhyfkeoqgftoccnmsd.supabase.co")!
     
     // This is your public anon key (safe to use in client apps)
-    static let anonKey = "your-anon-key-here"
+    static let anonKey = "sb_publishable_cVkHS5D_BXVbUc9Nrou-qw_D7KNtBI-"
     
     static let client = SupabaseClient(
         supabaseURL: url,
@@ -38,19 +38,19 @@ enum SpacesConfig {
     static let cdnEndpoint = "https://nyc3.digitaloceanspaces.com"
     
     // Your Space name
-    static let bucket = "grassy-photos"
+    static let bucket = "turf"
     
     // Digital Ocean Spaces API credentials
     // Generate at: https://cloud.digitalocean.com/account/api/tokens
-    static let accessKey = "your-access-key"
-    static let secretKey = "your-secret-key"
+    static let accessKey = "DO801URYDG3X7QFVVKVV"
+    static let secretKey = "Xv907OmPidhlhDSewIYF7Yt6oLFjSN8wGmwr3H6erbE"
     
     // Public URL for uploaded photos
     static func photoURL(for key: String) -> URL? {
         // For public Spaces, use the CDN endpoint
-        URL(string: "\(endpoint)/\(bucket)/\(key)")
+//        URL(string: "\(endpoint)/\(bucket)/\(key)")
         
         // Alternative: Use custom domain if configured
-        // URL(string: "https://cdn.yourdomain.com/\(key)")
+         URL(string: "https://turf.nyc3.cdn.digitaloceanspaces.com/\(key)")
     }
 }
