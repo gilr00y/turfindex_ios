@@ -15,9 +15,11 @@ struct ContentView: View {
         ZStack {
             Group {
                 if appState.currentUser == nil {
+                    // Show public leaderboard with sign-in option
                     LeaderboardView()
                 } else {
-                    FeedView()
+                    // Show tab-based navigation for authenticated users
+                    MainTabView()
                 }
             }
             .environment(appState)

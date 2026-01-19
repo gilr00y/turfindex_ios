@@ -134,6 +134,12 @@ struct OnboardingView: View {
             } else {
                 await appState.signIn(email: email, password: password)
             }
+            
+            // Show error if one occurred
+            if let error = appState.error {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }
