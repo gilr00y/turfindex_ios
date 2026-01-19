@@ -64,6 +64,47 @@ struct UploadConfirmResponse: Codable {
     let message: String?
 }
 
+// MARK: - Leaderboard Models
+
+/// Response from the top 100 leaderboard endpoint
+struct LeaderboardResponse: Codable {
+    let id: String
+    let userId: String
+    let status: String
+    let metadata: UploadMetadata
+    let images: [RatedImage]
+    let createdAt: String
+    let updatedAt: String
+    let rating: ImageRating?
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case userId
+        case status
+        case metadata
+        case images
+        case createdAt
+        case updatedAt
+        case rating
+    }
+}
+
+struct RatedImage: Codable {
+    let key: String
+    let filename: String
+    let contentType: String
+    let rating: ImageRating?
+    let url: String
+}
+
+struct ImageRating: Codable {
+    let quality: Int
+    let composition: Int
+    let lighting: Int
+    let overall: Int
+    let feedback: String
+}
+
 // MARK: - Helper Extensions
 
 extension ImageInfo {

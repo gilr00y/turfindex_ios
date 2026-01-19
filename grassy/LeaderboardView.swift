@@ -18,6 +18,15 @@ struct LeaderboardEntry: Identifiable {
 struct LeaderboardView: View {
     @State private var showOnboarding = false
     @State private var entries: [LeaderboardEntry] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var refreshID = UUID() // Force view refresh
+    
+    private var totalImages: Int {
+        entries.reduce(0) { total, entry in
+            total + 1 + (entry.post.additionalPhotos?.count ?? 0)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -32,21 +41,72 @@ struct LeaderboardView: View {
                         headerSection
                             .padding(.bottom, 20)
                         
-                        // Leaderboard entries
-                        LazyVStack(spacing: 12) {
-                            ForEach(entries) { entry in
-                                NavigationLink {
-                                    PostDetailView(entry: entry)
-                                } label: {
-                                    LeaderboardCard(entry: entry)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        // Loading state
+                        if isLoading {
+                            ProgressView()
+                                .tint(TurfTheme.primary)
+                                .scaleEffect(1.5)
+                                .padding(.top, 50)
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 100) // Space for floating button
+                        // Error state
+                        else if let errorMessage = errorMessage {
+                            VStack(spacing: 16) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundStyle(TurfTheme.sunOrange)
+                                
+                                Text("Oops!")
+                                    .font(.title2.bold())
+                                    .foregroundStyle(.white)
+                                
+                                Text(errorMessage)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                                
+                                Button {
+                                    Task {
+                                        await loadLeaderboardData()
+                                    }
+                                } label: {
+                                    Label("Try Again", systemImage: "arrow.clockwise")
+                                        .font(.headline)
+                                }
+                                .buttonStyle(.turfPrimary)
+                                .padding(.top, 8)
+                            }
+                            .padding(.top, 50)
+                        }
+                        // Leaderboard entries
+                        else {
+                            // Debug banner to confirm real data
+                            if entries.count < 10 {
+                                Text("🔴 LIVE API DATA - \(entries.count) entries loaded")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(8)
+                                    .background(Color.red)
+                                    .cornerRadius(8)
+                                    .padding(.bottom, 8)
+                            }
+                            
+                            LazyVStack(spacing: 12) {
+                                ForEach(entries) { entry in
+                                    NavigationLink {
+                                        PostDetailView(entry: entry)
+                                    } label: {
+                                        LeaderboardCard(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.bottom, 100) // Space for floating button
+                        }
                     }
                 }
+                .id(refreshID) // Force refresh when ID changes
                 
                 // Floating join button
                 VStack {
@@ -84,7 +144,9 @@ struct LeaderboardView: View {
             OnboardingView()
         }
         .onAppear {
-            loadMockData()
+            Task {
+                await loadLeaderboardData()
+            }
         }
     }
     
@@ -109,8 +171,8 @@ struct LeaderboardView: View {
             
             // Stats row
             HStack(spacing: 30) {
-                StatPill(value: "100", label: "Entries")
-                StatPill(value: "2.4K", label: "Images")
+                StatPill(value: "\(entries.count)", label: "Entries")
+                StatPill(value: "\(totalImages)", label: "Images")
                 StatPill(value: "5d", label: "Remaining")
             }
             .padding(.top, 8)
@@ -125,31 +187,125 @@ struct LeaderboardView: View {
         .padding(.horizontal)
     }
     
-    private func loadMockData() {
-        // Generate 100 mock entries
-        entries = (1...100).map { rank in
-            let photoCount = Int.random(in: 2...5)
-            let additionalPhotos = (1..<photoCount).map { offset in
-                "https://picsum.photos/400/30\(offset)?random=\(rank)\(offset)"
+    private func loadLeaderboardData() async {
+        print("🔄 loadLeaderboardData() called")
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            print("📞 Calling LeaderboardService.shared.fetchTop100()")
+            let responses = try await LeaderboardService.shared.fetchTop100()
+            print("✅ Received \(responses.count) responses from API")
+            
+            // Convert API responses to LeaderboardEntry objects
+            let newEntries = responses.enumerated().map { (index, response) -> LeaderboardEntry in
+                // Get the primary image (first one with a rating, or just the first one)
+                let primaryImage = response.images.first { $0.rating != nil } ?? response.images.first
+                
+                // Get additional photo URLs (all images except the primary one)
+                let additionalPhotos = response.images
+                    .filter { $0.url != primaryImage?.url }
+                    .map { $0.url }
+                
+                // Calculate score from rating
+                let score = response.rating?.overall ?? primaryImage?.rating?.overall ?? 0
+                
+                // Create a Post object from the response
+                let post = Post(
+                    id: response.id,
+                    userId: response.userId,
+                    username: extractUsername(from: response.userId),
+                    caption: {
+                        // Use the image rating feedback if available and not just a period
+                        if let feedback = response.rating?.feedback, feedback != ".", !feedback.isEmpty {
+                            return feedback
+                        }
+                        if let imageFeedback = primaryImage?.rating?.feedback, imageFeedback != ".", !imageFeedback.isEmpty {
+                            return imageFeedback
+                        }
+                        return "Amazing turf submission! 🌿"
+                    }(),
+                    location: "Community",
+                    tags: extractTags(from: response),
+                    photoUrl: primaryImage?.url ?? "",
+                    additionalPhotos: additionalPhotos.isEmpty ? nil : additionalPhotos,
+                    createdAt: parseDate(response.createdAt) ?? Date(),
+                    updatedAt: parseDate(response.updatedAt)
+                )
+                
+                return LeaderboardEntry(
+                    rank: index + 1,
+                    post: post,
+                    score: score * 10 // Scale up the score for display
+                )
             }
             
-            return LeaderboardEntry(
-                rank: rank,
-                post: Post(
-                    id: UUID().uuidString,
-                    userId: UUID().uuidString,
-                    username: mockUsernames.randomElement() ?? "user\(rank)",
-                    caption: mockCaptions.randomElement() ?? "Beautiful lawn!",
-                    location: mockLocations.randomElement() ?? "Backyard",
-                    tags: mockTags.shuffled().prefix(Int.random(in: 1...3)).map { $0 },
-                    photoUrl: "https://picsum.photos/400/300?random=\(rank)", // Placeholder images
-                    additionalPhotos: additionalPhotos,
-                    createdAt: Date().addingTimeInterval(-Double.random(in: 0...604800)), // Within last week
-                    updatedAt: nil
-                ),
-                score: max(1, 1000 - (rank * 10) + Int.random(in: -20...20))
-            )
+            print("📝 Created \(newEntries.count) leaderboard entries")
+            
+            // Debug: Print first entry details
+            if let firstEntry = newEntries.first {
+                print("🔍 First entry details:")
+                print("   Rank: #\(firstEntry.rank)")
+                print("   Username: @\(firstEntry.post.username)")
+                print("   Photo URL: \(firstEntry.post.photoUrl)")
+                print("   Caption: \(firstEntry.post.caption)")
+                print("   Score: \(firstEntry.score)")
+            }
+            
+            // Update UI on main thread
+            await MainActor.run {
+                entries = newEntries
+                refreshID = UUID() // Force refresh
+                isLoading = false
+                print("✅ Successfully loaded leaderboard data - UI updated with \(entries.count) entries")
+                print("   Current entries count in state: \(entries.count)")
+            }
+            
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to load leaderboard: \(error.localizedDescription)"
+                isLoading = false
+            }
+            print("❌ Error loading leaderboard: \(error)")
         }
+    }
+    
+    // Helper function to extract a username from userId (using last part)
+    private func extractUsername(from userId: String) -> String {
+        let components = userId.split(separator: "-")
+        return components.last.map(String.init) ?? userId
+    }
+    
+    // Helper function to extract tags from response metadata
+    private func extractTags(from response: LeaderboardResponse) -> [String] {
+        var tags: [String] = []
+        
+        // Add status as a tag
+        if response.status == "upload_completed" {
+            tags.append("verified")
+        }
+        
+        // Add quality indicators based on ratings
+        if let rating = response.rating {
+            if rating.overall >= 8 {
+                tags.append("top-rated")
+            }
+            if rating.composition >= 8 {
+                tags.append("well-composed")
+            }
+            if rating.lighting >= 8 {
+                tags.append("great-lighting")
+            }
+        }
+        
+        return tags
+    }
+    
+    // Helper function to parse ISO8601 date strings
+    private func parseDate(_ dateString: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: dateString)
     }
 }
 
@@ -310,5 +466,6 @@ private let mockTags = [
 ]
 
 #Preview {
+    // Note: Preview uses mock data. Run the app to see real API data.
     LeaderboardView()
 }

@@ -234,9 +234,6 @@ actor ImageUploadService {
             throw ImageUploadError.confirmationFailed(statusCode: httpResponse.statusCode)
         }
         
-        print("CONFIRM RESPONSE DATA")
-        print(data.)
-        
         let confirmResponse = try JSONDecoder().decode(UploadConfirmResponse.self, from: data)
         
         print("✅ Success: \(confirmResponse.success)")
