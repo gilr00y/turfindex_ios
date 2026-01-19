@@ -18,9 +18,22 @@
 		A19F06632F184F31000F115E /* grassy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = grassy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A17745FF2F1ED11100057E38 /* Exceptions for "grassy" folder in "grassy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A19F06622F184F31000F115E /* grassy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A19F06652F184F31000F115E /* grassy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A17745FF2F1ED11100057E38 /* Exceptions for "grassy" folder in "grassy" target */,
+			);
 			path = grassy;
 			sourceTree = "<group>";
 		};
@@ -285,6 +298,7 @@
 				DEVELOPMENT_TEAM = M47F6L358V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = grassy/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -317,6 +331,7 @@
 				DEVELOPMENT_TEAM = M47F6L358V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = grassy/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

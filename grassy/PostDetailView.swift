@@ -137,45 +137,63 @@ struct PostDetailView: View {
     // MARK: - Rank Section
     
     private var rankSection: some View {
-        HStack {
-            // Rank badge
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(rankColor.gradient)
-                        .frame(width: 60, height: 60)
+        VStack(spacing: 16) {
+            HStack {
+                // Rank badge
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(rankColor.gradient)
+                            .frame(width: 60, height: 60)
+                        
+                        Text("#\(entry.rank)")
+                            .font(.title3.bold())
+                            .foregroundStyle(.white)
+                    }
                     
-                    Text("#\(entry.rank)")
-                        .font(.title3.bold())
-                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("This Week")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                        
+                        Text(rankDescription)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    }
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("This Week")
+                Spacer()
+                
+                // Score
+                VStack(spacing: 4) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(TurfTheme.primary)
+                    
+                    Text("\(entry.score)")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    
+                    Text("score")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.7))
-                    
-                    Text(rankDescription)
-                        .font(.headline)
-                        .foregroundStyle(.white)
                 }
             }
             
-            Spacer()
-            
-            // Score
-            VStack(spacing: 4) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(TurfTheme.primary)
-                
-                Text("\(entry.score)")
-                    .font(.title3.bold())
-                    .foregroundStyle(.white)
-                
-                Text("score")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
+            // Rating breakdown bar chart
+            if let rating = entry.rating {
+                VStack(spacing: 0) {
+                    Divider()
+                        .background(.white.opacity(0.2))
+                        .padding(.vertical, 12)
+                    
+                    VStack(spacing: 10) {
+                        RatingBar(label: "Overall", value: rating.overall)
+                        RatingBar(label: "Quality", value: rating.quality)
+                        RatingBar(label: "Composition", value: rating.composition)
+                        RatingBar(label: "Lighting", value: rating.lighting)
+                    }
+                }
             }
         }
         .padding()
@@ -440,6 +458,60 @@ private let mockPhones = [
     "(555) 567-8901"
 ]
 
+// MARK: - Rating Bar Component
+
+struct RatingBar: View {
+    let label: String
+    let value: Int
+    
+    private var barColor: Color {
+        // Interpolate from red (0) to green (10)
+        let normalizedValue = Double(value) / 10.0
+        
+        if normalizedValue >= 0.7 {
+            // Green range (7-10)
+            return Color.green
+        } else if normalizedValue >= 0.4 {
+            // Yellow/Orange range (4-6)
+            return Color.orange
+        } else {
+            // Red range (0-3)
+            return Color.red
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Label
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 90, alignment: .leading)
+            
+            // Bar background and fill
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(.white.opacity(0.1))
+                    
+                    // Filled bar
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(barColor.gradient)
+                        .frame(width: geometry.size.width * (CGFloat(value) / 10.0))
+                }
+            }
+            .frame(height: 12)
+            
+            // Value
+            Text("\(value)")
+                .font(.subheadline.bold())
+                .foregroundStyle(barColor)
+                .frame(width: 25, alignment: .trailing)
+        }
+    }
+}
+
 #Preview {
     NavigationStack {
         PostDetailView(entry: LeaderboardEntry(
@@ -460,7 +532,14 @@ private let mockPhones = [
                 createdAt: Date().addingTimeInterval(-86400),
                 updatedAt: nil
             ),
-            score: 1247
+            score: 1247,
+            rating: ImageRating(
+                quality: 9,
+                composition: 8,
+                lighting: 10,
+                overall: 9,
+                feedback: "Outstanding turf quality!"
+            )
         ))
     }
 }

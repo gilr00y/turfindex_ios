@@ -13,6 +13,7 @@ struct LeaderboardEntry: Identifiable {
     let rank: Int
     let post: Post
     let score: Int
+    let rating: ImageRating? // Individual rating breakdown
 }
 
 struct LeaderboardView: View {
@@ -236,7 +237,8 @@ struct LeaderboardView: View {
                 return LeaderboardEntry(
                     rank: index + 1,
                     post: post,
-                    score: score * 10 // Scale up the score for display
+                    score: score * 10, // Scale up the score for display
+                    rating: response.rating ?? primaryImage?.rating // Store the rating breakdown
                 )
             }
             

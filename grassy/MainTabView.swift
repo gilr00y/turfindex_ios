@@ -255,7 +255,8 @@ struct LeaderboardAuthenticatedView: View {
                 return LeaderboardEntry(
                     rank: index + 1,
                     post: post,
-                    score: score * 10
+                    score: score * 10,
+                    rating: response.rating ?? primaryImage?.rating // Store the rating breakdown
                 )
             }
             

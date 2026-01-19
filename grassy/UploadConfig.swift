@@ -13,11 +13,7 @@ struct UploadConfig {
     /// - Development: http://localhost:3000
     /// - Production: https://api.yourserver.com
     static let apiBaseURL: String = {
-        #if DEBUG
-        return "http://localhost:3000"
-        #else
-        return "https://api.turf.nyc"
-        #endif
+        return "http://138.197.102.182:3000"
     }()
     
     /// Timeout for API requests (in seconds)
