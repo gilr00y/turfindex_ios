@@ -27,6 +27,16 @@ actor PostService {
         tags: [String],
         photoUrl: String
     ) async throws -> Post {
+        print("\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+        print("┃   POST SERVICE: Creating Post    ┃")
+        print("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+        print("👤 User ID: \(userId)")
+        print("👤 Username: @\(username)")
+        print("📝 Caption: '\(caption)'")
+        print("📍 Location: '\(location)'")
+        print("🏷️ Tags: \(tags)")
+        print("🖼️ Photo URL: \(photoUrl)")
+        
         let request = CreatePostRequest(
             userId: userId,
             username: username,
@@ -36,15 +46,31 @@ actor PostService {
             photoUrl: photoUrl
         )
         
-        let post: Post = try await client
-            .from(Tables.posts)
-            .insert(request)
-            .select()
-            .single()
-            .execute()
-            .value
+        print("📤 Inserting into Supabase...")
         
-        return post
+        do {
+            let post: Post = try await client
+                .from(Tables.posts)
+                .insert(request)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            print("✅ Post created successfully!")
+            print("📌 Post ID: \(post.id)")
+            print("🕒 Created at: \(post.createdAt)")
+            print("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n")
+            
+            return post
+            
+        } catch {
+            print("❌ Failed to create post!")
+            print("📋 Error: \(error)")
+            print("📋 Localized: \(error.localizedDescription)")
+            print("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n")
+            throw error
+        }
     }
     
     // MARK: - Fetch Posts

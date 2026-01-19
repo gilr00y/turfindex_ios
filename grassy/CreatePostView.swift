@@ -124,12 +124,38 @@ struct CreatePostView: View {
     }
     
     private func createPost() {
-        guard let imageData = selectedImageData,
-              let uiImage = UIImage(data: imageData) else { return }
+        print("🎬 CREATE POST: Starting...")
+        
+        guard let imageData = selectedImageData else {
+            print("❌ CREATE POST: No image data selected")
+            return
+        }
+        
+        print("✅ CREATE POST: Image data size: \(imageData.count) bytes")
+        
+        guard let uiImage = UIImage(data: imageData) else {
+            print("❌ CREATE POST: Failed to create UIImage from data")
+            return
+        }
+        
+        print("✅ CREATE POST: UIImage created - Size: \(uiImage.size)")
+        print("📝 CREATE POST: Caption: '\(caption)'")
+        print("📍 CREATE POST: Location: '\(location)'")
+        print("🏷️ CREATE POST: Tags: \(tags)")
         
         Task {
+            print("🔄 CREATE POST: Starting compression...")
+            
             // Compress image before upload
-            guard let compressedData = ImageHelper.prepareForUpload(uiImage) else { return }
+            guard let compressedData = ImageHelper.prepareForUpload(uiImage) else {
+                print("❌ CREATE POST: Image compression failed")
+                return
+            }
+            
+            print("✅ CREATE POST: Compressed to \(compressedData.count) bytes")
+            print("📊 CREATE POST: Compression ratio: \(Double(compressedData.count) / Double(imageData.count) * 100)%")
+            
+            print("🚀 CREATE POST: Calling appState.createPost()...")
             
             await appState.createPost(
                 caption: caption,
@@ -138,7 +164,12 @@ struct CreatePostView: View {
                 imageData: compressedData
             )
             
-            if appState.error == nil {
+            if let error = appState.error {
+                print("❌ CREATE POST: Error occurred: \(error.localizedDescription)")
+                print("📋 CREATE POST: Full error: \(error)")
+            } else {
+                print("✅ CREATE POST: Success! Post created")
+                print("🎉 CREATE POST: Dismissing view...")
                 dismiss()
             }
         }

@@ -12,7 +12,7 @@ struct LeaderboardEntry: Identifiable {
     let id = UUID()
     let rank: Int
     let post: Post
-    let votes: Int
+    let score: Int
 }
 
 struct LeaderboardView: View {
@@ -110,7 +110,7 @@ struct LeaderboardView: View {
             // Stats row
             HStack(spacing: 30) {
                 StatPill(value: "100", label: "Entries")
-                StatPill(value: "2.4K", label: "Votes")
+                StatPill(value: "2.4K", label: "Images")
                 StatPill(value: "5d", label: "Remaining")
             }
             .padding(.top, 8)
@@ -147,7 +147,7 @@ struct LeaderboardView: View {
                     createdAt: Date().addingTimeInterval(-Double.random(in: 0...604800)), // Within last week
                     updatedAt: nil
                 ),
-                votes: max(1, 1000 - (rank * 10) + Int.random(in: -20...20))
+                score: max(1, 1000 - (rank * 10) + Int.random(in: -20...20))
             )
         }
     }
@@ -204,13 +204,13 @@ struct LeaderboardCard: View {
             
             Spacer()
             
-            // Votes
+            // Change
             VStack(spacing: 4) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .foregroundStyle(TurfTheme.primary)
                 
-                Text("\(entry.votes)")
+                Text("\(entry.score)")
                     .font(.caption.bold())
                     .foregroundStyle(.white.opacity(0.8))
             }

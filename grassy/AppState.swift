@@ -94,7 +94,20 @@ class AppState {
     
     @MainActor
     func createPost(caption: String, location: String, tags: [String], imageData: Data) async {
-        guard let user = currentUser else { return }
+        print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📬 APPSTATE: createPost() called")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        guard let user = currentUser else {
+            print("❌ APPSTATE: No current user!")
+            return
+        }
+        
+        print("✅ APPSTATE: Current user: @\(user.username) (ID: \(user.id))")
+        print("📝 APPSTATE: Caption: '\(caption)'")
+        print("📍 APPSTATE: Location: '\(location)'")
+        print("🏷️ APPSTATE: Tags: \(tags)")
+        print("📦 APPSTATE: Image data: \(imageData.count) bytes")
         
         isLoading = true
         error = nil
@@ -102,6 +115,9 @@ class AppState {
         do {
             // Generate a unique filename
             let filename = "\(UUID().uuidString).jpg"
+            print("📄 APPSTATE: Generated filename: \(filename)")
+            
+            print("\n🚀 APPSTATE: Step 1 - Uploading image...")
             
             // 1. Upload photo using new API service (3-step process)
             let recordId = try await ImageUploadService.shared.uploadImages(
@@ -111,9 +127,14 @@ class AppState {
                 ]
             )
             
+            print("✅ APPSTATE: Image uploaded! Record ID: \(recordId)")
+            
             // 2. Construct the photo URL from recordId and filename
             // Format: user_id/record_id/filename
             let photoUrl = "\(user.id)/\(recordId)/\(filename)"
+            print("🔗 APPSTATE: Photo URL: \(photoUrl)")
+            
+            print("\n💾 APPSTATE: Step 2 - Creating post in database...")
             
             // 3. Create post in Supabase
             let post = try await PostService.shared.createPost(
@@ -125,14 +146,32 @@ class AppState {
                 photoUrl: photoUrl
             )
             
+            print("✅ APPSTATE: Post created in database!")
+            print("📌 APPSTATE: Post ID: \(post.id)")
+            
             // 4. Add to local posts array
             posts.insert(post, at: 0)
+            print("✅ APPSTATE: Post added to local array (now \(posts.count) posts)")
             
             // 5. Cache the image
             if let image = UIImage(data: imageData) {
                 imageCache[photoUrl] = image
+                print("✅ APPSTATE: Image cached")
             }
+            
+            print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("🎉 APPSTATE: Post creation complete!")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+            
         } catch {
+            print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("❌ APPSTATE: Post creation failed!")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            print("📋 Error type: \(type(of: error))")
+            print("📋 Error: \(error)")
+            print("📋 Localized: \(error.localizedDescription)")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+            
             self.error = error
         }
         

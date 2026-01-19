@@ -32,7 +32,7 @@ struct PostDetailView: View {
                     
                     // Content sections
                     VStack(alignment: .leading, spacing: 24) {
-                        // Rank and votes section
+                        // Rank and score section
                         rankSection
                         
                         // Post details
@@ -163,17 +163,17 @@ struct PostDetailView: View {
             
             Spacer()
             
-            // Votes
+            // Score
             VStack(spacing: 4) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title)
                     .foregroundStyle(TurfTheme.primary)
                 
-                Text("\(entry.votes)")
+                Text("\(entry.score)")
                     .font(.title3.bold())
                     .foregroundStyle(.white)
                 
-                Text("votes")
+                Text("score")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
@@ -460,7 +460,7 @@ private let mockPhones = [
                 createdAt: Date().addingTimeInterval(-86400),
                 updatedAt: nil
             ),
-            votes: 1247
+            score: 1247
         ))
     }
 }

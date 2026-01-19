@@ -146,7 +146,7 @@ struct LeaderboardAuthenticatedView: View {
             // Stats row
             HStack(spacing: 30) {
                 StatPill(value: "100", label: "Entries")
-                StatPill(value: "2.4K", label: "Votes")
+                StatPill(value: "2.4K", label: "Images")
                 StatPill(value: "5d", label: "Remaining")
             }
             .padding(.top, 8)
@@ -183,7 +183,7 @@ struct LeaderboardAuthenticatedView: View {
                     createdAt: Date().addingTimeInterval(-Double.random(in: 0...604800)),
                     updatedAt: nil
                 ),
-                votes: max(1, 1000 - (rank * 10) + Int.random(in: -20...20))
+                score: max(1, 1000 - (rank * 10) + Int.random(in: -20...20))
             )
         }
     }
